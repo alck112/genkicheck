@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>點餐追蹤器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh; background: #1a1714;
+    font-family: 'Noto Sans TC', sans-serif; color: #f0ece8;
+    padding: 20px 12px 60px; -webkit-tap-highlight-color: transparent;
+  }
+  .container { max-width: 480px; margin: 0 auto; }
+  .header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; padding: 0 4px; }
+  .logo { font-size: 40px; filter: drop-shadow(0 2px 8px rgba(255,183,51,0.3)); }
+  .title { font-size: 26px; font-weight: 900; color: #FFB733; letter-spacing: -0.5px; line-height: 1.2; }
+  .subtitle { font-size: 13px; color: #8a8580; margin-top: 2px; }
+  .settings { background: #242018; border-radius: 16px; padding: 16px 18px; margin-bottom: 16px; }
+  .settings-title { font-size: 12px; font-weight: 700; color: #8a8580; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 12px; }
+  .provider-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .provider-tab {
+    padding: 8px 14px; border-radius: 10px; border: 1.5px solid #3a3530;
+    background: transparent; color: #8a8580; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif; white-space: nowrap;
+  }
+  .provider-tab:hover { border-color: #5a5550; color: #c0bab4; }
+  .provider-tab.active { border-color: #FFB733; color: #FFB733; background: rgba(255,183,51,0.08); }
+  .field-group { margin-bottom: 10px; }
+  .field-label { font-size: 11px; font-weight: 700; color: #6a6560; margin-bottom: 5px; display: block; letter-spacing: 0.3px; }
+  .field-row { display: flex; gap: 8px; align-items: center; }
+  .field-row input, .field-input {
+    flex: 1; background: #1a1714; border: 1.5px solid #3a3530; border-radius: 10px;
+    padding: 10px 14px; color: #f0ece8; font-size: 13px;
+    font-family: 'Space Mono', monospace; outline: none; min-width: 0; transition: border-color 0.2s; width: 100%;
+  }
+  .field-row input:focus, .field-input:focus { border-color: #FFB733; }
+  .field-row input::placeholder, .field-input::placeholder { color: #5a5550; }
+  .key-toggle { background: none; border: none; color: #8a8580; cursor: pointer; font-size: 16px; padding: 6px; flex-shrink: 0; }
+  .advanced-toggle {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #6a6560; cursor: pointer;
+    background: none; border: none; padding: 4px 0; margin-top: 4px; font-family: 'Noto Sans TC', sans-serif; transition: color 0.2s;
+  }
+  .advanced-toggle:hover { color: #FFB733; }
+  .advanced-toggle .arrow { transition: transform 0.2s; display: inline-block; font-size: 10px; }
+  .advanced-toggle .arrow.open { transform: rotate(90deg); }
+  .advanced-fields { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #2a2520; }
+  .advanced-fields.open { display: block; }
+  .provider-note { font-size: 11px; color: #6a6560; margin-top: 8px; line-height: 1.5; }
+  .provider-note a { color: #FFB733; text-decoration: none; }
+  .provider-note a:hover { text-decoration: underline; }
+  .free-badge { display: inline-block; font-size: 10px; font-weight: 700; background: rgba(74,222,128,0.15); color: #4ade80; padding: 2px 7px; border-radius: 6px; margin-left: 6px; vertical-align: middle; }
+  .upload-zone {
+    border: 2px dashed #3a3530; border-radius: 16px; padding: 28px 20px; text-align: center; cursor: pointer;
+    margin-bottom: 20px; transition: all 0.2s; background: rgba(255,183,51,0.03);
+  }
+  .upload-zone:hover { border-color: #FFB733; background: rgba(255,183,51,0.06); }
+  .upload-zone.dragover { border-color: #FFB733; background: rgba(255,183,51,0.08); }
+  .upload-icon { font-size: 36px; }
+  .upload-text { font-size: 15px; font-weight: 700; color: #f0ece8; margin-top: 8px; }
+  .upload-hint { font-size: 12px; color: #6a6560; margin-top: 4px; }
+  .upload-zone input { display: none; }
+  .shimmer-bar { height: 20px; border-radius: 8px; margin: 12px 0; background: linear-gradient(90deg, #2a2520 25%, #3a3530 50%, #2a2520 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+  @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+  .error-msg { background: rgba(239,68,68,0.12); color: #f87171; padding: 12px 16px; border-radius: 12px; font-size: 13px; margin-bottom: 16px; display: none; word-break: break-all; }
+  .progress-section { background: #242018; border-radius: 16px; padding: 16px 20px; margin-bottom: 20px; display: none; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .progress-label { font-size: 13px; font-weight: 700; color: #c0bab4; letter-spacing: 0.5px; text-transform: uppercase; }
+  .progress-count { font-size: 14px; font-weight: 700; color: #FFB733; font-family: 'Space Mono', monospace; }
+  .progress-track { height: 8px; background: #1a1714; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; width: 0%; transition: width 0.5s cubic-bezier(0.4,0,0.2,1), background 0.3s; background: linear-gradient(90deg, #FFB733, #FF8C00); }
+  .all-done { text-align: center; margin-top: 10px; font-size: 14px; font-weight: 700; color: #4ade80; display: none; }
+  .time-group { margin-bottom: 20px; }
+  .time-tag { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #8a8580; padding: 8px 4px; letter-spacing: 0.3px; text-transform: uppercase; }
+  .time-dot { width: 6px; height: 6px; border-radius: 50%; background: #FFB733; }
+  .item-row { display: flex; align-items: center; gap: 14px; padding: 14px 12px; border-radius: 12px; cursor: pointer; transition: all 0.2s; user-select: none; animation: fadeUp 0.4s ease both; }
+  .item-row:hover { background: rgba(255,183,51,0.06); }
+  .item-row.done { opacity: 0.5; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  .checkbox { width: 26px; height: 26px; border-radius: 8px; border: 2px solid #5a5550; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+  .item-row.done .checkbox { background: #FFB733; border-color: #FFB733; animation: checkPop 0.25s ease both; }
+  @keyframes checkPop { 0%{transform:scale(0.8)} 50%{transform:scale(1.15)} 100%{transform:scale(1)} }
+  .checkmark { color: #1a1714; font-size: 15px; font-weight: 900; display: none; }
+  .item-row.done .checkmark { display: block; }
+  .item-info { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .item-name { font-size: 15px; font-weight: 500; line-height: 1.3; transition: all 0.2s; }
+  .item-row.done .item-name { text-decoration: line-through; color: #8a8580; }
+  .qty-badge { font-size: 11px; font-weight: 700; background: rgba(255,183,51,0.15); color: #FFB733; padding: 2px 6px; border-radius: 6px; flex-shrink: 0; }
+  .price { font-size: 15px; font-weight: 700; color: #FFB733; font-family: 'Space Mono', monospace; flex-shrink: 0; transition: color 0.2s; }
+  .item-row.done .price { color: #6a6560; }
+  .total-bar { display: none; justify-content: space-between; align-items: center; padding: 18px 20px; background: #242018; border-radius: 16px; margin-top: 8px; border-top: 2px solid #FFB733; }
+  .total-label { font-size: 16px; font-weight: 900; }
+  .total-price { font-size: 22px; font-weight: 900; color: #FFB733; font-family: 'Space Mono', monospace; }
+  .empty-state { text-align: center; padding: 48px 20px; }
+  .empty-icon { font-size: 48px; display: block; margin-bottom: 12px; }
+  .empty-text { color: #8a8580; font-size: 15px; }
+  .reset-btn { display: none; width: 100%; margin-top: 12px; padding: 14px; border-radius: 12px; border: 1.5px solid #3a3530; background: transparent; color: #8a8580; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif; }
+  .reset-btn:hover { border-color: #f87171; color: #f87171; }
+  .ocr-progress { display: none; margin-bottom: 16px; background: #242018; border-radius: 12px; padding: 14px 18px; }
+  .ocr-progress-text { font-size: 13px; color: #c0bab4; margin-bottom: 8px; }
+  .ocr-progress-track { height: 6px; background: #1a1714; border-radius: 3px; overflow: hidden; }
+  .ocr-progress-fill { height: 100%; border-radius: 3px; width: 0%; background: linear-gradient(90deg, #60a5fa, #3b82f6); transition: width 0.3s; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header"><span class="logo">🍣</span><div><div class="title">點餐追蹤器</div><div class="subtitle">上傳訂單截圖，追蹤每道菜的送達狀態</div></div></div>
+  <div class="settings">
+    <div class="settings-title">辨識方式</div>
+    <div class="provider-tabs">
+      <button class="provider-tab active" data-provider="anthropic">Claude</button>
+      <button class="provider-tab" data-provider="openai">OpenAI</button>
+      <button class="provider-tab" data-provider="gemini">Gemini</button>
+      <button class="provider-tab" data-provider="custom">自訂</button>
+      <button class="provider-tab" data-provider="tesseract">本地 OCR<span class="free-badge">免費</span></button>
+    </div>
+    <div class="field-group" id="keyGroup"><label class="field-label">API Key</label><div class="field-row"><input type="password" id="apiKey" /><button class="key-toggle" id="keyToggle">👁</button></div></div>
+    <button class="advanced-toggle" id="advancedToggle"><span class="arrow" id="advArrow">▶</span> Base URL / Model</button>
+    <div class="advanced-fields" id="advancedFields">
+      <div class="field-group"><label class="field-label">Base URL</label><input class="field-input" type="text" id="baseUrl" /></div>
+      <div class="field-group" style="margin-bottom:0"><label class="field-label">Model</label><input class="field-input" type="text" id="modelName" /></div>
+    </div>
+    <div class="provider-note" id="providerNote"></div>
+  </div>
+  <label class="upload-zone" id="uploadZone"><input type="file" accept="image/*" multiple id="fileInput" /><div><div class="upload-icon">📸</div><div class="upload-text" id="uploadText">點擊或拖放訂單截圖</div><div class="upload-hint">支援多張圖片同時上傳</div></div></label>
+  <div id="loading" style="display:none; padding:0 4px;"></div>
+  <div class="ocr-progress" id="ocrProgress"><div class="ocr-progress-text" id="ocrProgressText"></div><div class="ocr-progress-track"><div class="ocr-progress-fill" id="ocrProgressFill"></div></div></div>
+  <div class="error-msg" id="errorMsg"></div>
+  <div class="progress-section" id="progressSection"><div class="progress-header"><span class="progress-label">送達進度</span><span class="progress-count" id="progressCount">0 / 0</span></div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div><div class="all-done" id="allDone">✨ 所有餐點已送達！</div></div>
+  <div id="itemsContainer"></div>
+  <div class="total-bar" id="totalBar"><span class="total-label">總計</span><span class="total-price" id="totalPrice">$0</span></div>
+  <button class="reset-btn" id="resetBtn">🗑 清除重來</button>
+  <div class="empty-state" id="emptyState"><span class="empty-icon">🍱</span><p class="empty-text">上傳訂單截圖開始追蹤</p></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+var VISION_PROMPT = 'You are an OCR assistant for restaurant orders. Extract ALL food items from these order screenshots.\nReturn ONLY a valid JSON array. No markdown, no backticks, no extra text.\nEach element: {"name":"item name in original language","price":number,"qty":number,"time":"order time like 18:32"}\nInclude the order time group for each item. Extract every single item visible.';
+var items = [], checked = {}, currentProvider = 'anthropic';
+var PROVIDERS = {
+  anthropic: { keyPH: 'sk-ant-...', baseUrl: 'https://api.anthropic.com', model: 'claude-sonnet-4-20250514', fmt: 'anthropic', note: '需要 <a href="https://console.anthropic.com/" target="_blank">Anthropic API Key</a>，辨識最準確' },
+  openai: { keyPH: 'sk-...', baseUrl: 'https://api.openai.com', model: 'gpt-4o', fmt: 'openai', note: '需要 <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI API Key</a>，使用 GPT-4o' },
+  gemini: { keyPH: 'AIza...', baseUrl: 'https://generativelanguage.googleapis.com', model: 'gemini-2.0-flash', fmt: 'gemini', note: '需要 <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio API Key</a>，免費額度很夠用' },
+  custom: { keyPH: 'your-api-key', baseUrl: 'https://api.openai.com', model: 'gpt-4o', fmt: 'openai', note: '使用 OpenAI 相容格式，適用各種代理、中轉站或本地模型' },
+  tesseract: { keyPH: '', baseUrl: '', model: '', fmt: 'tesseract', note: '瀏覽器本地 OCR，免費無需 Key。中文準確度較低。' }
+};
+var $key = document.getElementById('apiKey'), $url = document.getElementById('baseUrl'), $model = document.getElementById('modelName');
+var $keyG = document.getElementById('keyGroup'), $advT = document.getElementById('advancedToggle'), $advF = document.getElementById('advancedFields'), $advA = document.getElementById('advArrow'), $note = document.getElementById('providerNote');
+function sk(p,f){return 'ot_'+p+'_'+f;} function sav(f,v){if(currentProvider!=='tesseract')try{localStorage.setItem(sk(currentProvider,f),v)}catch(e){}} function ld(p,f){try{return localStorage.getItem(sk(p,f))||''}catch(e){return ''}}
+var advOpen=false;
+$advT.addEventListener('click',function(){advOpen=!advOpen;$advF.classList.toggle('open',advOpen);$advA.classList.toggle('open',advOpen);});
+function switchP(p){
+  currentProvider=p; var c=PROVIDERS[p];
+  document.querySelectorAll('.provider-tab').forEach(function(t){t.classList.toggle('active',t.dataset.provider===p);});
+  if(p==='tesseract'){$keyG.style.display='none';$advT.style.display='none';$advF.classList.remove('open');advOpen=false;$advA.classList.remove('open');}
+  else{$keyG.style.display='block';$advT.style.display='inline-flex';$key.placeholder=c.keyPH;$key.value=ld(p,'key');$key.type='password';$url.value=ld(p,'url')||c.baseUrl;$url.placeholder=c.baseUrl;$model.value=ld(p,'model')||c.model;$model.placeholder=c.model;if(p==='custom'&&!advOpen){advOpen=true;$advF.classList.add('open');$advA.classList.add('open');}}
+  $note.innerHTML=c.note;
+}
+document.querySelectorAll('.provider-tab').forEach(function(t){t.addEventListener('click',function(){switchP(t.dataset.provider);});});
+switchP('anthropic');
+$key.addEventListener('input',function(){sav('key',$key.value);}); $url.addEventListener('input',function(){sav('url',$url.value);}); $model.addEventListener('input',function(){sav('model',$model.value);});
+document.getElementById('keyToggle').addEventListener('click',function(){$key.type=$key.type==='password'?'text':'password';});
+function gUrl(){return($url.value.trim().replace(/\/+$/,''))||PROVIDERS[currentProvider].baseUrl;} function gMod(){return $model.value.trim()||PROVIDERS[currentProvider].model;}
+
+var uz=document.getElementById('uploadZone');
+uz.addEventListener('dragover',function(e){e.preventDefault();uz.classList.add('dragover');});
+uz.addEventListener('dragleave',function(){uz.classList.remove('dragover');});
+uz.addEventListener('drop',function(e){e.preventDefault();uz.classList.remove('dragover');if(e.dataTransfer.files.length)go(e.dataTransfer.files);});
+document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files.length)go(e.target.files);});
+
+function toB64(f){return new Promise(function(r,j){var x=new FileReader();x.onload=function(){r(x.result.split(',')[1]);};x.onerror=function(){j(new Error('Read failed'));};x.readAsDataURL(f);});}
+
+function go(fl){
+  hideError(); var files=Array.from(fl), fmt=PROVIDERS[currentProvider].fmt;
+  if(fmt==='tesseract'){doTess(files);return;}
+  var key=$key.value.trim(); if(!key){showError('請先輸入 API Key');return;} doAPI(files,key,fmt);
+}
+
+function extractJSON(t){
+  if(!t)return null;
+  try{var a=JSON.parse(t);if(Array.isArray(a))return a;}catch(e){}
+  var c=t.replace(/```(?:json)?[\s\n]*/g,'').replace(/```/g,'').trim();
+  try{var b=JSON.parse(c);if(Array.isArray(b))return b;}catch(e){}
+  var m=t.match(/\[[\s\S]*\]/);
+  if(m){try{var d=JSON.parse(m[0]);if(Array.isArray(d))return d;}catch(e){}}
+  return null;
+}
+
+function doAPI(files,key,fmt){
+  showLoad(true);
+  Promise.all(files.map(function(f){return toB64(f).then(function(b){return{b64:b,type:f.type||'image/png'};});}))
+  .then(function(b64s){
+    if(fmt==='anthropic')return apiAnthropic(b64s,key);
+    if(fmt==='openai')return apiOpenAI(b64s,key);
+    if(fmt==='gemini')return apiGemini(b64s,key);
+  }).then(function(raw){
+    console.log('[OrderTracker] raw:',raw);
+    var p=extractJSON(raw);
+    if(!p||!p.length){showError('無法解析餐點。API 回應：'+String(raw||'(空)').substring(0,300));return;}
+    dedupe(p);
+  }).catch(function(e){
+    console.error('[OrderTracker]',e);
+    showError('失敗：'+(e.message||'未知錯誤'));
+  }).finally(function(){showLoad(false);document.getElementById('fileInput').value='';});
+}
+
+function apiAnthropic(b,k){
+  var u=gUrl(),m=gMod();
+  var imgs=b.map(function(i){return{type:'image',source:{type:'base64',media_type:i.type,data:i.b64}};});
+  return fetch(u+'/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:m,max_tokens:4096,messages:[{role:'user',content:imgs.concat([{type:'text',text:VISION_PROMPT}])}]})
+  }).then(function(r){if(!r.ok)return r.json().catch(function(){return{};}).then(function(e){throw new Error((e.error&&e.error.message)||'API錯誤('+r.status+')');});return r.json();})
+  .then(function(d){return(d.content||[]).map(function(x){return x.type==='text'?x.text:'';}).join('');});
+}
+
+function apiOpenAI(b,k){
+  var u=gUrl(),m=gMod();
+  var imgs=b.map(function(i){return{type:'image_url',image_url:{url:'data:'+i.type+';base64,'+i.b64}};});
+  return fetch(u+'/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+k},
+    body:JSON.stringify({model:m,max_tokens:4096,messages:[{role:'user',content:imgs.concat([{type:'text',text:VISION_PROMPT}])}]})
+  }).then(function(r){if(!r.ok)return r.json().catch(function(){return{};}).then(function(e){throw new Error((e.error&&e.error.message)||'API錯誤('+r.status+')');});return r.json();})
+  .then(function(d){return d.choices[0].message.content;});
+}
+
+function apiGemini(b,k){
+  var u=gUrl(),m=gMod(),parts=[];
+  b.forEach(function(i){parts.push({inlineData:{mimeType:i.type,data:i.b64}});});
+  parts.push({text:VISION_PROMPT});
+  return fetch(u+'/v1beta/models/'+m+':generateContent?key='+k,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:parts}]})
+  }).then(function(r){if(!r.ok)return r.json().catch(function(){return{};}).then(function(e){throw new Error((e.error&&e.error.message)||'API錯誤('+r.status+')');});return r.json();})
+  .then(function(d){return d.candidates[0].content.parts.map(function(p){return p.text||'';}).join('');});
+}
+
+function doTess(files){
+  var pe=document.getElementById('ocrProgress'),pt=document.getElementById('ocrProgressText'),pf=document.getElementById('ocrProgressFill');
+  pe.style.display='block';pt.textContent='正在載入 OCR 引擎⋯';pf.style.width='5%';
+  Tesseract.createWorker('chi_tra+eng',1,{logger:function(m){if(m.status==='recognizing text'){var p=Math.round((m.progress||0)*100);pt.textContent='辨識中⋯ '+p+'%';pf.style.width=p+'%';}}})
+  .then(function(w){var all='',chain=Promise.resolve();
+    for(var i=0;i<files.length;i++)(function(idx){chain=chain.then(function(){pt.textContent='辨識第'+(idx+1)+'/'+files.length+'張⋯';return w.recognize(files[idx]);}).then(function(r){all+=r.data.text+'\n---\n';});})(i);
+    return chain.then(function(){return w.terminate();}).then(function(){pe.style.display='none';var p=parseTess(all);if(!p.length){showError('本地OCR未能辨識出餐點，建議用AI方案。');return;}dedupe(p);});
+  }).catch(function(e){pe.style.display='none';showError('OCR失敗：'+(e.message||''));});
+}
+
+function parseTess(text){
+  var res=[],ct='',lines=text.split('\n');
+  for(var i=0;i<lines.length;i++){var l=lines[i].trim();if(!l||l==='---')continue;var tm=l.match(/下單時間\s*[:：]\s*(\d{1,2}:\d{2})/);if(tm){ct=tm[1];continue;}
+  var pm=l.match(/^(.+?)\s*\$\s*(\d+)\s*$/);if(pm){var n=pm[1].replace(/[x×]\s*\d+/gi,'').trim(),p=parseInt(pm[2]);if(n&&p>0){res.push({name:n,price:p,qty:1,time:ct||'未知'});continue;}}
+  var nm=l.match(/^(.+?)\s+(\d{2,3})\s*$/);if(nm){var n2=nm[1].replace(/[x×]\s*\d+/gi,'').trim(),p2=parseInt(nm[2]);if(n2.length>=2&&p2>=5&&p2<=500)res.push({name:n2,price:p2,qty:1,time:ct||'未知'});}}
+  return res;
+}
+
+function dedupe(parsed){
+  var map=new Map();
+  parsed.forEach(function(it){var k=(it.time||'')+'||'+it.name;if(map.has(k))map.get(k).qty+=(it.qty||1);else map.set(k,{name:it.name,price:it.price,qty:it.qty||1,time:it.time});});
+  items=Array.from(map.values());checked={};render();
+}
+
+function render(){
+  var c=document.getElementById('itemsContainer'),e=document.getElementById('emptyState'),pg=document.getElementById('progressSection'),tb=document.getElementById('totalBar'),rb=document.getElementById('resetBtn');
+  if(!items.length){c.innerHTML='';e.style.display='block';pg.style.display='none';tb.style.display='none';rb.style.display='none';return;}
+  e.style.display='none';pg.style.display='block';tb.style.display='flex';rb.style.display='block';
+  var groups={};items.forEach(function(it,idx){var t=it.time||'未知';if(!groups[t])groups[t]=[];groups[t].push({name:it.name,price:it.price,qty:it.qty,_i:idx});});
+  var h='';Object.keys(groups).forEach(function(time){var gi=groups[time];
+    h+='<div class="time-group"><div class="time-tag"><span class="time-dot"></span>下單時間 '+esc(time)+'</div>';
+    gi.forEach(function(it,i){var d=checked[it._i]?' done':'';
+      h+='<div class="item-row'+d+'" data-idx="'+it._i+'" style="animation-delay:'+(i*60)+'ms"><div class="checkbox"><span class="checkmark">✓</span></div><div class="item-info"><span class="item-name">'+esc(it.name)+'</span>'+(it.qty>1?'<span class="qty-badge">×'+it.qty+'</span>':'')+'</div><span class="price">$'+it.price+'</span></div>';
+    });h+='</div>';});
+  c.innerHTML=h;
+  c.querySelectorAll('.item-row').forEach(function(row){row.addEventListener('click',function(){var idx=parseInt(this.dataset.idx);checked[idx]=!checked[idx];this.classList.toggle('done',checked[idx]);updProg();});});
+  var sum=0;items.forEach(function(i){sum+=(i.price||0)*(i.qty||1);});document.getElementById('totalPrice').textContent='$'+sum;updProg();
+}
+
+function updProg(){
+  var cnt=0;Object.keys(checked).forEach(function(k){if(checked[k])cnt++;});var tot=items.length,pct=tot?(cnt/tot)*100:0;
+  document.getElementById('progressCount').textContent=cnt+' / '+tot;
+  var f=document.getElementById('progressFill');f.style.width=pct+'%';f.style.background=pct===100?'linear-gradient(90deg,#4ade80,#22c55e)':'linear-gradient(90deg,#FFB733,#FF8C00)';
+  document.getElementById('allDone').style.display=pct===100?'block':'none';
+}
+
+function showLoad(on){var el=document.getElementById('loading'),tx=document.getElementById('uploadText');if(on){el.style.display='block';el.innerHTML='<div class="shimmer-bar" style="width:90%"></div><div class="shimmer-bar" style="width:75%"></div><div class="shimmer-bar" style="width:60%"></div><div class="shimmer-bar" style="width:50%"></div>';tx.textContent='正在識別菜單中⋯';}else{el.style.display='none';el.innerHTML='';tx.textContent='點擊或拖放訂單截圖';}}
+function showError(m){var el=document.getElementById('errorMsg');el.textContent=m;el.style.display='block';}
+function hideError(){document.getElementById('errorMsg').style.display='none';}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+document.getElementById('resetBtn').addEventListener('click',function(){items=[];checked={};render();});
+</script>
+</body>
+</html>
