@@ -145,6 +145,61 @@ var PROVIDERS = {
   custom: { keyPH: 'your-api-key', baseUrl: 'https://api.openai.com', model: 'gpt-4o', fmt: 'openai', note: '使用 OpenAI 相容格式，適用各種代理、中轉站或本地模型' },
   tesseract: { keyPH: '', baseUrl: '', model: '', fmt: 'tesseract', note: '瀏覽器本地 OCR，免費無需 Key。中文準確度較低。' }
 };
+ // 改呢個做你個 GitHub 用戶名
+const GITHUB_USER = 'alck112';  // ← 改呢度
+const MENU_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/genki-menu-scraper/main/menu.json`;
+
+let menuDB = [];
+
+// 載入菜單數據
+async function loadMenu() {
+  try {
+    // 檢查緩存（24小時內唔重新fetch）
+    const cache = localStorage.getItem('genki_menu');
+    const cacheTime = localStorage.getItem('genki_menu_time');
+    const now = Date.now();
+    
+    if (cache && cacheTime && (now - parseInt(cacheTime) < 24*60*60*1000)) {
+      menuDB = JSON.parse(cache);
+      console.log('用緩存:', menuDB.length, '項');
+      return;
+    }
+    
+    // 從 GitHub 攞最新
+    const res = await fetch(MENU_URL + '?t=' + now);
+    menuDB = await res.json();
+    
+    localStorage.setItem('genki_menu', JSON.stringify(menuDB));
+    localStorage.setItem('genki_menu_time', now.toString());
+    console.log('已更新:', menuDB.length, '項');
+    
+  } catch(e) {
+    console.error('載入失敗:', e);
+    if (localStorage.getItem('genki_menu')) {
+      menuDB = JSON.parse(localStorage.getItem('genki_menu'));
+    }
+  }
+}
+
+// 模糊匹配（OCR名稱對應圖片）
+function findImage(ocrName) {
+  if (!menuDB.length) return null;
+  
+  const clean = str => str.toLowerCase().replace(/[^\u4e00-\u9fa5]/g, '');
+  const target = clean(ocrName);
+  
+  // 完全一樣
+  let match = menuDB.find(i => clean(i.name) === target);
+  if (match) return match.imgUrl;
+  
+  // 包含關係
+  match = menuDB.find(i => target.includes(clean(i.name)) || clean(i.name).includes(target));
+  
+  return match ? match.imgUrl : null;
+}
+
+// 開App時載入
+loadMenu();
 var $key = document.getElementById('apiKey'), $url = document.getElementById('baseUrl'), $model = document.getElementById('modelName');
 var $keyG = document.getElementById('keyGroup'), $advT = document.getElementById('advancedToggle'), $advF = document.getElementById('advancedFields'), $advA = document.getElementById('advArrow'), $note = document.getElementById('providerNote');
 function sk(p,f){return 'ot_'+p+'_'+f;} function sav(f,v){if(currentProvider!=='tesseract')try{localStorage.setItem(sk(currentProvider,f),v)}catch(e){}} function ld(p,f){try{return localStorage.getItem(sk(p,f))||''}catch(e){return ''}}
@@ -265,7 +320,28 @@ function render(){
   var h='';Object.keys(groups).forEach(function(time){var gi=groups[time];
     h+='<div class="time-group"><div class="time-tag"><span class="time-dot"></span>下單時間 '+esc(time)+'</div>';
     gi.forEach(function(it,i){var d=checked[it._i]?' done':'';
-      h+='<div class="item-row'+d+'" data-idx="'+it._i+'" style="animation-delay:'+(i*60)+'ms"><div class="checkbox"><span class="checkmark">✓</span></div><div class="item-info"><span class="item-name">'+esc(it.name)+'</span>'+(it.qty>1?'<span class="qty-badge">×'+it.qty+'</span>':'')+'</div><span class="price">$'+it.price+'</span></div>';
+    // 喺 gi.forEach 入面：
+var match = findImage(it.name);
+var imgHtml = '';
+
+if (match) {
+  // 用免費Proxy避免403
+  const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(match)}&w=100`;
+  imgHtml = `<img src="${proxyUrl}" style="width:40px;height:40px;object-fit:cover;border-radius:8px;margin-right:10px;background:#2a2520;" onerror="this.style.display='none'">`;
+} else {
+  imgHtml = `<div style="width:40px;height:40px;background:#2a2520;border-radius:8px;margin-right:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🍣</div>`;
+}
+
+// 插入圖片落 item-row
+h += `<div class="item-row${d}" data-idx="${it._i}" style="animation-delay:${i*60}ms">
+  ${imgHtml}
+  <div class="checkbox"><span class="checkmark">✓</span></div>
+  <div class="item-info">
+    <span class="item-name">${esc(it.name)}</span>
+    ${(it.qty>1?'<span class="qty-badge">×'+it.qty+'</span>':'')}
+  </div>
+  <span class="price">$${it.price}</span>
+</div>`;                          
     });h+='</div>';});
   c.innerHTML=h;
   c.querySelectorAll('.item-row').forEach(function(row){row.addEventListener('click',function(){var idx=parseInt(this.dataset.idx);checked[idx]=!checked[idx];this.classList.toggle('done',checked[idx]);updProg();});});
