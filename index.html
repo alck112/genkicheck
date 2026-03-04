@@ -226,11 +226,11 @@ function apiOpenAI(b,k){
 function apiGemini(b,k){
   var u=gUrl(),m=gMod(),parts=[];
   b.forEach(function(i){parts.push({inlineData:{mimeType:i.type,data:i.b64}});});
-  parts.push({text:VISION_PROMPT});
+  parts.push({text:'Look at these restaurant order screenshots carefully. Extract every single food item you can see.\nFor each item, provide: the item name exactly as shown (in the original language), the price (number only), the quantity, and the order time shown above each group (like 18:32).\nReturn a JSON array where each element is: {"name":"item name","price":number,"qty":number,"time":"HH:MM"}\nDo NOT return an empty array. There are clearly visible food items with prices in these images. List them all.'});
   return fetch(u+'/v1beta/models/'+m+':generateContent?key='+k,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{parts:parts}]})
+    body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseMimeType:'application/json'}})
   }).then(function(r){if(!r.ok)return r.json().catch(function(){return{};}).then(function(e){throw new Error((e.error&&e.error.message)||'API錯誤('+r.status+')');});return r.json();})
-  .then(function(d){return d.candidates[0].content.parts.map(function(p){return p.text||'';}).join('');});
+  .then(function(d){console.log('[Gemini] full response:',JSON.stringify(d).substring(0,500));return d.candidates[0].content.parts.map(function(p){return p.text||'';}).join('');});
 }
 
 function doTess(files){
